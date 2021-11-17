@@ -10,32 +10,50 @@ import (
 	"time"
 )
 
-// var only_table = `
-// 	create table tasks(
-// 		id integer primary key,
-// 		task text,
-// 		intime utctime not null,
-// 		outtime utctime);
-// `
+var schema = `
+	create table tasks(
+		id integer primary key,
+		task text,
+		intime utctime not null,
+		outtime utctime);
+`
+
+var row_check = "select * from tasks where outtime is null order by intime desc limit 1"
 
 // 'punch in project_name'
 // punch out
 // punch list project_name
 func main() {
+	// TODO home expand
 	path := "/home/brady/punch.db"
-	db, err := sql.Open("sqlite3", path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	punched_in, err := db.Query("select * from tasks where outtime is null order by intime desc limit 1")
-	defer punched_in.Close()
 
 	args := os.Args[1:]
 	command := args[0]
 	switch {
+	case command == "new":
+		new_db, err := sql.Open("sqlite3", path)
+		stmt, err := new_db.Prepare(schema)
+		defer stmt.Close()
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = stmt.Exec()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("initialized ~/punch.db")
+
 	case command == "in":
 		task := args[1]
 		any := false
+		db, err := sql.Open("sqlite3", path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		punched_in, err := db.Query(row_check)
+		defer punched_in.Close()
+
 		for punched_in.Next() {
 			any = true
 		}
@@ -56,22 +74,16 @@ func main() {
 			fmt.Printf("punched into %s", task)
 		}
 
-	// case command == "new":
-	// 	stmt, err := db.Prepare(only_table)
-	// 	defer stmt.Close()
-
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	_, err = stmt.Exec()
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	fmt.Printf("initialized punch.db", task)
-
 	case command == "out":
 		var id int
 		var task string
+		db, err := sql.Open("sqlite3", path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		punched_in, err := db.Query(row_check)
+		defer punched_in.Close()
+
 		for punched_in.Next() {
 			var i time.Time
 			var o time.Time
