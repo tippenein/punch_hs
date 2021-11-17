@@ -21,5 +21,5 @@ punch out
 ## Install
 
 ```
-go install
+go build
 ```

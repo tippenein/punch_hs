@@ -1,4 +1,4 @@
-module main.go
+module punch
 
 go 1.16
 
