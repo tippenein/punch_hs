@@ -73,6 +73,14 @@ main = do
       conn <- open path
       rows <- query_ conn minutesQuery :: IO [Minutes]
       mapM_ print rows
+    "total" -> case headMaybe rest of
+      Just task -> do
+        conn <- open path
+        rows <- query conn minutesQueryWithTask (Only task) :: IO [Minutes]
+        let total = sum $ map (\Minutes {minutes} -> round minutes :: Integer) rows
+        p $ "total: " <> show (total `div` 60) <> " hours"
+      Nothing ->
+        p "Please specify a task"
 p = putStrLn
 
 headMaybe :: [a] -> Maybe a
@@ -90,3 +98,4 @@ rowCheck = "select * from tasks where outtime is null order by intime desc limit
 punchIn = "insert into tasks(task, intime, outtime) values(?, datetime(), null)"
 punchOut = "update tasks set outtime = datetime() where id = ?"
 minutesQuery = "select task, (julianday(outtime) - julianday(intime))*1440.0 from tasks"
+minutesQueryWithTask = "select task, (julianday(outtime) - julianday(intime))*1440.0 from tasks where task = ?"
