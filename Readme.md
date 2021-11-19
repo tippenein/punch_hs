@@ -21,5 +21,5 @@ punch out
 ## Install
 
 ```
-go build
+stack install
 ```

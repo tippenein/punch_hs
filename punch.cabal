@@ -1,0 +1,34 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: e91c47c1eb30072372ebdeee1dfbfd38599ef56fc907afb9675c666af1f9aee4
+
+name:           punch
+version:        0.1.0.0
+category:       Web
+homepage:       https://github.com/tippenein/punch#readme
+author:         Brady Ouren
+maintainer:     tippenein@gmail.com
+copyright:      2021 Brady Ouren
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+
+executable punch
+  main-is: Main.hs
+  other-modules:
+      Paths_punch
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , directory
+    , filepath
+    , sqlite-simple
+    , time
+  default-language: Haskell2010
