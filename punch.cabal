@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e91c47c1eb30072372ebdeee1dfbfd38599ef56fc907afb9675c666af1f9aee4
+-- hash: ec1500d8f4b3e09c5ae4a928fe4c7fd0dce6801a7cfab2421204606f77ed200e
 
 name:           punch
 version:        0.1.0.0
@@ -29,6 +29,7 @@ executable punch
       base >=4.7 && <5
     , directory
     , filepath
+    , optparse-generic
     , sqlite-simple
     , time
   default-language: Haskell2010

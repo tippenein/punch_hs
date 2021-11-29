@@ -1,16 +1,27 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DataKinds, DeriveAnyClass, DeriveGeneric, FlexibleInstances, NamedFieldPuns, OverloadedStrings, StandaloneDeriving, TypeOperators #-}
+
 module Main where
 
-import Prelude hiding (id)
-import Database.SQLite.Simple
-import Database.SQLite.Simple.FromRow
-import System.Directory (getCurrentDirectory, getHomeDirectory)
-import System.Environment (getArgs)
-import System.FilePath (joinPath)
-import System.Environment
+import Data.Functor
+import Data.Maybe
 import Data.Time
+import Database.SQLite.Simple
+import Options.Generic
+import Prelude hiding (id, init)
+import System.Directory (doesFileExist, getHomeDirectory)
+import System.FilePath (joinPath)
+
+data Options
+  = In String
+  | Out
+  | List { name :: Maybe String, days :: Maybe Int }
+  | Total { name :: Maybe String, days :: Maybe Int}
+  deriving (Show, Generic, ParseRecord)
+
+-- instance ParseRecord (Options Wrapped)
+-- instance ParseRecord (Options Unwrapped)
+-- deriving instance Show (Options Unwrapped)
 
 data Entry
   = Entry
@@ -25,43 +36,44 @@ instance FromRow Entry where
 
 data Minutes
   = Minutes
-  { name :: String
-  , minutes :: Float
+  { _name :: String
+  , _minutes :: Float
   }
 
 instance Show Minutes where
-  show (Minutes { name, minutes }) = name <> ": " <> show (round minutes) <> " mins"
+  show (Minutes { _name, _minutes }) = _name <> ": " <> show (round _minutes) <> " mins"
 
 instance FromRow Minutes where
   fromRow = Minutes <$> field <*> field
 
-expandHome :: String -> IO FilePath
-expandHome p = do
-  homePath <- getHomeDirectory
-  return (joinPath [homePath, p])
+init path = do
+  p $ "Initializing punch db @ " <> path
+  conn <- open path
+  execute_ conn schema
 
--- 'punch in project_name'
--- punch out
--- punch list project_name
+expandHome :: String -> IO FilePath
+expandHome pth = do
+  homePath <- getHomeDirectory
+  return (joinPath [homePath, pth])
+
 main :: IO ()
 main = do
-  (cmd:rest) <- getArgs
+  opts <- getRecord "Punch"
   path <- expandHome "punch.db"
-  case cmd of
-    "in" -> do
-      putStrLn "Going in"
+  -- (cmd:rest) <- getArgs
+  exists <- doesFileExist path
+  if exists then mempty else init path
+  case opts of
+    In task -> do
       conn <- open path
       rows <- query_ conn rowCheck :: IO [Entry]
       if length rows > 0
         then putStrLn "Can't punch in again"
-        else
-          case headMaybe rest of
-            Just task -> do
-              p $ "Punching into " <> task
-              execute conn punchIn (Only task)
-            Nothing -> putStrLn "Must provide a task name to check in"
+        else do
+          p $ "Punching into " <> task
+          execute conn punchIn (Only task)
       return ()
-    "out" -> do
+    Out -> do
       conn <- open path
       rows <- query_ conn rowCheck :: IO [Entry]
       case headMaybe rows of
@@ -69,18 +81,22 @@ main = do
           p $ "Punching out from " <> task
           execute conn punchOut (Only id)
         Nothing -> p "Can't punch out if you're not in..."
-    "list" -> do
+    List { name = mtask, days = days'}-> do
+      let days = fromMaybe 7 days'
       conn <- open path
-      rows <- query_ conn minutesQuery :: IO [Minutes]
+      rows <- case mtask of
+        Just task ->
+          query conn minutesQueryWithTask (Only task) :: IO [Minutes]
+        Nothing ->
+          query_ conn $ minutesQuery :: IO [Minutes]
       mapM_ print rows
-    "total" -> case headMaybe rest of
-      Just task -> do
-        conn <- open path
-        rows <- query conn minutesQueryWithTask (Only task) :: IO [Minutes]
-        let total = sum $ map (\Minutes {minutes} -> round minutes :: Integer) rows
-        p $ "total: " <> show (total `div` 60) <> " hours"
-      Nothing ->
-        p "Please specify a task"
+    Total { name = task, days = days'} -> do
+      let days = fromMaybe 7 days'
+      conn <- open path
+      rows <- query conn minutesQueryWithTask (Only task) :: IO [Minutes]
+      let total = sum $ map (\Minutes {_minutes} -> round _minutes :: Integer) rows
+      p $ "total: " <> show (total `div` 60) <> " hours"
+
 p = putStrLn
 
 headMaybe :: [a] -> Maybe a
@@ -97,5 +113,5 @@ schema = "create table tasks( \
 rowCheck = "select * from tasks where outtime is null order by intime desc limit 1"
 punchIn = "insert into tasks(task, intime, outtime) values(?, datetime(), null)"
 punchOut = "update tasks set outtime = datetime() where id = ?"
-minutesQuery = "select task, (julianday(outtime) - julianday(intime))*1440.0 from tasks"
+minutesQuery = "select task, intime, (julianday(outtime) - julianday(intime))*1440.0 from tasks"
 minutesQueryWithTask = "select task, (julianday(outtime) - julianday(intime))*1440.0 from tasks where task = ?"

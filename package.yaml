@@ -16,6 +16,7 @@ dependencies:
   - sqlite-simple
   - directory
   - filepath
+  - optparse-generic
   - time
 
 executables:
