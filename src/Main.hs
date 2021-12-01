@@ -37,14 +37,18 @@ instance FromRow Entry where
 data Minutes
   = Minutes
   { _name :: String
+  , _intime :: UTCTime
   , _minutes :: Float
   }
 
 instance Show Minutes where
-  show (Minutes { _name, _minutes }) = _name <> ": " <> show (round _minutes) <> " mins"
+  show (Minutes { _name, _minutes, _intime }) = _name <> " ( " <> displayDay _intime <> " ): " <> show (round _minutes) <> " mins"
+
+displayDay :: UTCTime -> String
+displayDay = formatTime defaultTimeLocale "%D"
 
 instance FromRow Minutes where
-  fromRow = Minutes <$> field <*> field
+  fromRow = Minutes <$> field <*> field <*> field
 
 init path = do
   p $ "Initializing punch db @ " <> path
@@ -82,7 +86,7 @@ main = do
           execute conn punchOut (Only id)
         Nothing -> p "Can't punch out if you're not in..."
     List { name = mtask, days = days'}-> do
-      let days = fromMaybe 7 days'
+      -- let days = fromMaybe 7 days'
       conn <- open path
       rows <- case mtask of
         Just task ->
@@ -91,7 +95,7 @@ main = do
           query_ conn $ minutesQuery :: IO [Minutes]
       mapM_ print rows
     Total { name = task, days = days'} -> do
-      let days = fromMaybe 7 days'
+      -- let days = fromMaybe 7 days'
       conn <- open path
       rows <- query conn minutesQueryWithTask (Only task) :: IO [Minutes]
       let total = sum $ map (\Minutes {_minutes} -> round _minutes :: Integer) rows
@@ -114,4 +118,4 @@ rowCheck = "select * from tasks where outtime is null order by intime desc limit
 punchIn = "insert into tasks(task, intime, outtime) values(?, datetime(), null)"
 punchOut = "update tasks set outtime = datetime() where id = ?"
 minutesQuery = "select task, intime, (julianday(outtime) - julianday(intime))*1440.0 from tasks"
-minutesQueryWithTask = "select task, (julianday(outtime) - julianday(intime))*1440.0 from tasks where task = ?"
+minutesQueryWithTask = "select task, intime, (julianday(outtime) - julianday(intime))*1440.0 from tasks where task = ?"
