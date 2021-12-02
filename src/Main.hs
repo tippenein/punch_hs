@@ -42,7 +42,11 @@ data Minutes
   }
 
 instance Show Minutes where
-  show (Minutes { _name, _minutes, _intime }) = _name <> " ( " <> displayDay _intime <> " ): " <> show (round _minutes) <> " mins"
+  show (Minutes { _name, _minutes, _intime }) =
+    _name
+    <> " ( " <> displayDay _intime <> " ): "
+    <> show (round _minutes)
+    <> " mins"
 
 displayDay :: UTCTime -> String
 displayDay = formatTime defaultTimeLocale "%D"
@@ -112,10 +116,15 @@ schema = "create table tasks( \
   \ id integer primary key, \
   \ task text, \
   \ intime utctime not null, \
-  \ outtime utctime);"
+  \ outtime utctime, \
+  \ billed boolean);"
 
 rowCheck = "select * from tasks where outtime is null order by intime desc limit 1"
 punchIn = "insert into tasks(task, intime, outtime) values(?, datetime(), null)"
 punchOut = "update tasks set outtime = datetime() where id = ?"
-minutesQuery = "select task, intime, (julianday(outtime) - julianday(intime))*1440.0 from tasks"
-minutesQueryWithTask = "select task, intime, (julianday(outtime) - julianday(intime))*1440.0 from tasks where task = ?"
+minutesQuery = "select task, intime, (julianday(outtime) - julianday(intime))*1440.0 from tasks where outtime is not null"
+minutesQueryWithTask = "select task, \
+  \ intime, \
+  \ (julianday(outtime) - julianday(intime))*1440.0 \
+  \ from tasks where task = ? \
+  \ and outtime is not null"
