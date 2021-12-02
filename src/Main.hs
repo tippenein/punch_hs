@@ -29,10 +29,11 @@ data Entry
   , task :: String
   , inTime :: UTCTime
   , outTime :: Maybe UTCTime
+  , billed :: Bool
   }
 
 instance FromRow Entry where
-  fromRow = Entry <$>  field <*>  field <*>  field <*> field
+  fromRow = Entry <$>  field <*>  field <*>  field <*> field <*> field
 
 data Minutes
   = Minutes
@@ -122,9 +123,12 @@ schema = "create table tasks( \
 rowCheck = "select * from tasks where outtime is null order by intime desc limit 1"
 punchIn = "insert into tasks(task, intime, outtime) values(?, datetime(), null)"
 punchOut = "update tasks set outtime = datetime() where id = ?"
-minutesQuery = "select task, intime, (julianday(outtime) - julianday(intime))*1440.0 from tasks where outtime is not null"
+minutesQuery = "select task, intime, (julianday(outtime) - julianday(intime))*1440.0 \
+  \ from tasks where outtime is not null \
+  \ and billed is false"
 minutesQueryWithTask = "select task, \
   \ intime, \
   \ (julianday(outtime) - julianday(intime))*1440.0 \
   \ from tasks where task = ? \
-  \ and outtime is not null"
+  \ and outtime is not null \
+  \ and billed is false"
