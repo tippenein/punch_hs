@@ -6,15 +6,17 @@ A time tracking cli which doesn't do much
 ## Usage
 
 ```bash
-# initialize the db at ~/punch.db
-punch new
-
 # start the time
 punch in <some task name>
 
 # end the current task
 punch out
 
+# list the current times
+punch list [--name STRING] [--days INT]
+
+# total unbilled times in hours
+punch total [--name STRING] [--days INT]
 ```
 
 
