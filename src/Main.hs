@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
+
 {-# LANGUAGE DataKinds, DeriveAnyClass, DeriveGeneric, FlexibleInstances, NamedFieldPuns, OverloadedStrings, StandaloneDeriving, TypeOperators #-}
 
 module Main where
@@ -121,7 +122,7 @@ schema = "create table tasks( \
   \ billed boolean);"
 
 rowCheck = "select * from tasks where outtime is null order by intime desc limit 1"
-punchIn = "insert into tasks(task, intime, outtime) values(?, datetime(), null)"
+punchIn = "insert into tasks(task, intime, outtime, billed) values(?, datetime(), null, false)"
 punchOut = "update tasks set outtime = datetime() where id = ?"
 minutesQuery = "select task, intime, (julianday(outtime) - julianday(intime))*1440.0 \
   \ from tasks where outtime is not null \
